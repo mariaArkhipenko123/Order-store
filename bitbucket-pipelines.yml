@@ -1,0 +1,46 @@
+pipelines:
+  branches:
+    master:
+      step:
+          name: "Run Unit Tests"
+          image: mcr.microsoft.com/dotnet/sdk:6.0
+          script:
+            - cd LAB-net-maria;
+            - dotnet restore 
+            - dotnet build --no-restore
+            - dotnet test --no-build --logger "console;verbosity=detailed"
+      - step:
+         name: "Deployment"
+         script:    
+          - pipe: atlassian/ssh-run:0.4.0
+            variables:
+                SSH_USER: $DO_USER
+                SERVER: $DO_HOST
+                MODE: 'command'
+                COMMAND: ' 
+                    cd $REPO_PATH$BITBUCKET_REPO_SLUG;
+                    sudo git fetch origin;  
+                    sudo git checkout master;   
+                    sudo git pull origin master;
+                    sudo git clean -fd;
+                    cd $REPO_PATH$BITBUCKET_REPO_SLUG/LAB-net-maria/docker-compose;
+                    sudo touch .env;
+                    sudo echo "ASPNETCORE_ENVIRONMENT=$ASPNETCORE_ENVIRONMENT" >> .env;
+                    sudo echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> .env;
+                    sudo echo "POSTGRES_USER=$POSTGRES_USER" >> .env;
+                    sudo echo "MONGO_USER=$MONGO_USER" >> .env;
+                    sudo echo "MONGO_PASSWORD=$MONGO_PASSWORD" >> .env;
+                    sudo echo "MONGO_URI=$MONGO_URI" >> .env;
+                    sudo echo "REDIS_PASSWORD=$REDIS_PASSWORD" >> .env;
+                    sudo echo "APP_HOST=$APP_HOST" >> .env;
+                    sudo echo "APP_PORT=$APP_PORT" >> .env;
+                    sudo echo "EXPOSE_NGINX_PORT=$EXPOSE_NGINX_PORT" >> .env;
+                    sudo echo "SSL_NGINX_PORT=$SSL_NGINX_PORT" >> .env;
+                    sudo echo "CONFIG_NGINX_FOLDER=$CONFIG_NGINX_FOLDER" >> .env;
+                    sudo echo "SERVER_NAME_NGINX=$SERVER_NAME_NGINX" >> .env;
+                    sudo echo "CLIENT_ID=$CLIENT_ID" >> .env;
+                    sudo echo "CLIENT_SECRET=$CLIENT_SECRET" >> .env;
+                    sudo echo "JWT_KEY=$JWT_KEY" >> .env;
+                    sudo make -f Makefile prod_down;
+                    sudo make -f Makefile prod_up;
+                    '

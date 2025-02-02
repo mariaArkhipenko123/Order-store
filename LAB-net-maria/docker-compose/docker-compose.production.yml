@@ -1,0 +1,4 @@
+services:
+  # ASP.NET Core API
+  m-arkhipenka-api:
+    restart: always

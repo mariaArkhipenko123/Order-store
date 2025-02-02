@@ -1,0 +1,55 @@
+services:
+  # ASP.NET Core API
+  m-arkhipenka-api:
+    container_name: m-arkhipenka-api
+    build:
+      context: ..
+      dockerfile: ./LAB-net-maria/Dockerfile
+    expose:
+      - "${APP_PORT}"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}  
+      - ConnectionStrings__PostgreSQL=Host=postgres;Port=5432;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Database=m-arkhipenka-postgres
+      - ConnectionStrings__MongoDB=${MONGO_URI}
+      - REDIS_CONNECTION=redis:6379,password=${REDIS_PASSWORD}
+      - Jwt__Key=${JWT_KEY}  
+      - External__Google__ClientId=${GOOGLE_CLIENTID}
+      - External__Google__ClientSecret=${GOOGLE_CLIENTSECRET}
+      - Mongo__DbName={MONGO_DBNAME}
+      - Mongo__DbUser={MONGO_USENAME}
+      - Mongo__DbPassword={MONGO_USERPASS}
+    env_file:
+      - .env
+    networks:
+      - dotnet-lab-network
+
+  # Nginx
+  nginx:
+    image: nginx:stable-alpine
+    container_name: m-arkhipenka-nginx
+    restart: always
+    environment:
+      APP_HOST: ${APP_HOST}
+      APP_PORT: ${APP_PORT}
+      SERVER_NAME_NGINX: ${SERVER_NAME_NGINX}
+    env_file:
+      - .env
+    depends_on:
+      - m-arkhipenka-api
+    ports:
+      - ${EXPOSE_NGINX_PORT}:80
+      - ${SSL_NGINX_PORT}:443
+    volumes:
+      - ./nginx/nginx-config :/etc/nginx/templates # NGINX Template
+      - ./nginx/certs :/etc/nginx/certs # SSL certs
+      - ./logs/nginx:/var/log/nginx # Logs
+      - ./app:/app
+      - C:\Users\37544\Desktop\re\m-arkhipenka\serviceAccountKey.json:/app/serviceAccountKey.json
+
+    networks:
+      - dotnet-lab-network
+  
+networks:
+  dotnet-lab-network:
+    external: true
+    driver: bridge
